@@ -35,7 +35,9 @@ int RayTracer::getColors(const vector<vector<Ray>>& rays, const OutputVariable* 
     vector<color> tempX;
     for(vector<Ray> y : rays) {
         for(Ray x : y) {
-            tempX.push_back(rayColor(x, output, hittableList, lightVector));
+            color temp = rayColor(x, output, hittableList, lightVector, 0);
+            clamp(temp);
+            tempX.push_back(temp);
         }
         colors.push_back(tempX);
         tempX.clear();
@@ -72,10 +74,10 @@ void RayTracer::clamp(point3& color)
     else if(color.z() > (float) 1.0) color.z() = 1.0;
 }
 
-point3 RayTracer::rayColor(Ray ray, const OutputVariable *output, const HittableList &hittableList, const vector<LightVariable *> lightVector)
+point3 RayTracer::rayColor(Ray ray, const OutputVariable *output, const HittableList &hittableList, const vector<LightVariable *> lightVector, int bounce)
 {
     hit_record rec;
-    if(hittableList.hit(ray, 0.001, std::numeric_limits<double>::infinity(), rec)) {
+    if(hittableList.hit(ray, 0.01, std::numeric_limits<double>::infinity(), rec)) {
         point3 ambientColor = output->getAmbientIntensity().cwiseProduct(rec.colors.at(0)) * rec.colorCoefficients.at(0);
         point3 diffuseColor;
         diffuseColor << 0, 0, 0;
@@ -97,9 +99,13 @@ point3 RayTracer::rayColor(Ray ray, const OutputVariable *output, const Hittable
                 specularColor += intensities.at(1).cwiseProduct(rec.colors.at(2)) * rec.colorCoefficients.at(2) * specular;
             }
         }
-        point3 temp = ambientColor + diffuseColor + specularColor;
-        clamp(temp);
+        color temp = ambientColor + diffuseColor + specularColor;
+        if(bounce < 10 && output->isGlobalIllum()) {
+            point3 target = rec.p + rec.normal + randomVectorInHemisphere(rec.normal);
+            temp = temp.cwiseProduct(rayColor(Ray(rec.p, target - rec.p), output, hittableList, lightVector, bounce+1));
+        }
         return temp;
+        
     }
     else return output->getBkc();
 }

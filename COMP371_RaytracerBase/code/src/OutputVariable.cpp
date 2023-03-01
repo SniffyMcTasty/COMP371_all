@@ -113,3 +113,9 @@ color OutputVariable::getAmbientIntensity() const
 {
     return this->ai;
 }
+
+bool OutputVariable::isGlobalIllum() const
+{
+    if(this->globalillumInit) return this->globalillum;
+    return false;
+}

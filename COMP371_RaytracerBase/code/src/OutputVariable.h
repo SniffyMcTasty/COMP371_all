@@ -43,6 +43,7 @@ public:
     color getBkc() const;
     string getFilename() const;
     color getAmbientIntensity() const;
+    bool isGlobalIllum() const;
 };
 
 #endif
