@@ -7,15 +7,20 @@
 #include <string>
 #include <sstream>
 #include <iostream>
+#include "Hittable.h"
 
-class RectangleGeometry : public GeometryVariable
+class RectangleGeometry : public GeometryVariable, public Hittable
 {
 private:
-    array<float, 3> p1, p2, p3, p4;
+    point3 p1, p2, p3, p4;
 public:
     RectangleGeometry(nlohmann::json parsedJson);
     ~RectangleGeometry();
     virtual string toString() const override;
+    virtual bool hit(const Ray& r, double t_min, double t_max, hit_record& rec) const override;
+    vector<point3> getColors() const override;
+    vector<float> getColorCoefficients() const override;
+    float getPhongCoefficient() const override;
 };
 
 #endif

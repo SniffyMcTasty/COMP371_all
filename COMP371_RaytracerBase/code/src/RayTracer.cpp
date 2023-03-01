@@ -117,6 +117,9 @@ void RayTracer::run() {
             if(geometry->getType() == "sphere") {
                 world.add(make_shared<SphereGeometry>(*((SphereGeometry*) geometry)));
             }
+            if(geometry->getType() == "rectangle") {
+                world.add(make_shared<RectangleGeometry>(*((RectangleGeometry*) geometry)));
+            }
         }
         int success = getColors(rays, output, world, scene.getLightVector());
         cout << "\tOutput done" << endl;
