@@ -9,12 +9,12 @@ vector<vector<Ray>> RayTracer::initRays(const OutputVariable* output)
     float aspectRatio = float(width) / float(height);
     array<vec3, 3> cameraVectors = output->getCameraVectors(); // up, lookat, centre
     float fov = output->getFov() * M_PI / 180;
-    vec3 w = cameraVectors.at(2) - cameraVectors.at(1);
-    vec3 uCamera = cameraVectors.at(0).cross(w);
+    vec3 w = (cameraVectors.at(2) - cameraVectors.at(1)).normalized();
+    vec3 uCamera = cameraVectors.at(0).cross(w).normalized();
     vec3 vCamera = w.cross(uCamera);
     float unitHeight = 2 * tan(fov / 2);
     float unitWidth = aspectRatio * unitHeight;
-    point3 lowerLeftCorner = cameraVectors.at(2) - unitWidth/2*uCamera - unitHeight/2*vCamera - w;
+    point3 lowerLeftCorner = cameraVectors.at(2) - unitWidth*uCamera/2 - unitHeight*vCamera/2 - w;
     for(int i = height-1; i >= 0; i--) {
         for(int j = 0; j < width; j++) {
             float u = float(j) / (width-1);
@@ -35,34 +35,7 @@ int RayTracer::getColors(const vector<vector<Ray>>& rays, const OutputVariable* 
     vector<color> tempX;
     for(vector<Ray> y : rays) {
         for(Ray x : y) {
-            hit_record rec;
-            if(hittableList.hit(x, 0.001, std::numeric_limits<double>::infinity(), rec)) {
-                point3 ambientColor = output->getAmbientIntensity().cwiseProduct(rec.colors.at(0)) * rec.colorCoefficients.at(0);
-                point3 diffuseColor;
-                diffuseColor << 0, 0, 0;
-                point3 specularColor;
-                specularColor << 0, 0, 0;
-                vec3 V = (-x.getDirection()).normalized();
-                for(const LightVariable* light : lightVector) {
-                    array<point3, 2> intensities = light->getIntensities(); // id, is
-                    if(light->getType() == "point") {
-                        PointLight* pointLight = (PointLight*) light;
-                        vec3 L = (pointLight->getCentre() - rec.p).normalized();
-                        float lambertian = max(rec.normal.dot(L), (float) 0.0);
-                        diffuseColor += intensities.at(0).cwiseProduct(rec.colors.at(1)) * rec.colorCoefficients.at(1) * lambertian;
-                        float specular = 0.0;
-                        if(lambertian > 0.0) {
-                            vec3 R = (2 * rec.normal * L.dot(rec.normal) - L).normalized();
-                            specular = pow(max(R.dot(V), (float) 0.0), rec.phongCoefficient);
-                        }
-                        specularColor += intensities.at(1).cwiseProduct(rec.colors.at(2)) * rec.colorCoefficients.at(2) * specular;
-                    }
-                }
-                point3 temp = ambientColor + diffuseColor + specularColor;
-                clamp(temp);
-                tempX.push_back(temp);
-            }
-            else tempX.push_back(output->getBkc());
+            tempX.push_back(rayColor(x, output, hittableList, lightVector));
         }
         colors.push_back(tempX);
         tempX.clear();
@@ -97,6 +70,38 @@ void RayTracer::clamp(point3& color)
     else if(color.y() > (float) 1.0) color.y() = 1.0;
     if(color.z() < (float) 0.0) color.z() = 0.0;
     else if(color.z() > (float) 1.0) color.z() = 1.0;
+}
+
+point3 RayTracer::rayColor(Ray ray, const OutputVariable *output, const HittableList &hittableList, const vector<LightVariable *> lightVector)
+{
+    hit_record rec;
+    if(hittableList.hit(ray, 0.001, std::numeric_limits<double>::infinity(), rec)) {
+        point3 ambientColor = output->getAmbientIntensity().cwiseProduct(rec.colors.at(0)) * rec.colorCoefficients.at(0);
+        point3 diffuseColor;
+        diffuseColor << 0, 0, 0;
+        point3 specularColor;
+        specularColor << 0, 0, 0;
+        vec3 V = (-ray.getDirection()).normalized();
+        for(const LightVariable* light : lightVector) {
+            array<point3, 2> intensities = light->getIntensities(); // id, is
+            if(light->getType() == "point") {
+                PointLight* pointLight = (PointLight*) light;
+                vec3 L = (pointLight->getCentre() - rec.p).normalized();
+                float lambertian = max(rec.normal.dot(L), (float) 0.0);
+                diffuseColor += intensities.at(0).cwiseProduct(rec.colors.at(1)) * rec.colorCoefficients.at(1) * lambertian;
+                float specular = 0.0;
+                if(lambertian > 0.0) {
+                    vec3 R = (2 * rec.normal * L.dot(rec.normal) - L).normalized();
+                    specular = pow(max(R.dot(V), (float) 0.0), rec.phongCoefficient);
+                }
+                specularColor += intensities.at(1).cwiseProduct(rec.colors.at(2)) * rec.colorCoefficients.at(2) * specular;
+            }
+        }
+        point3 temp = ambientColor + diffuseColor + specularColor;
+        clamp(temp);
+        return temp;
+    }
+    else return output->getBkc();
 }
 
 RayTracer::~RayTracer()
