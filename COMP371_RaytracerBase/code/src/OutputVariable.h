@@ -27,7 +27,7 @@ private:
     /* Optional args */
     vector<unsigned int> raysperpixel; // 1, 2 or 3 values
     bool raysperpixelInit = false;
-    bool antialiasing;
+    bool antialiasing = false;
     bool antialiasingInit = false;
     bool twosiderender;
     bool twosiderenderInit = false;
@@ -44,6 +44,9 @@ public:
     string getFilename() const;
     color getAmbientIntensity() const;
     bool isGlobalIllum() const;
+    bool isAntialiasing() const;
+    bool isRaysPerPixelInit() const;
+    vector<unsigned int> getRaysPerPixel() const;
 };
 
 #endif

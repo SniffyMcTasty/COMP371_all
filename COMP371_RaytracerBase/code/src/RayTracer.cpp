@@ -1,9 +1,7 @@
 #include "RayTracer.h"
 
-vector<vector<Ray>> RayTracer::initRays(const OutputVariable* output)
+int RayTracer::initRays(const OutputVariable* output, const HittableList& hittableList, const vector<LightVariable*> lightVector)
 {
-    vector<vector<Ray>> rays;
-    vector<Ray> tempX;
     unsigned int height = output->getSize().at(1);
     unsigned int width = output->getSize().at(0);
     float aspectRatio = float(width) / float(height);
@@ -15,33 +13,55 @@ vector<vector<Ray>> RayTracer::initRays(const OutputVariable* output)
     float unitHeight = 2 * tan(fov / 2);
     float unitWidth = aspectRatio * unitHeight;
     point3 lowerLeftCorner = cameraVectors.at(2) - unitWidth*uCamera/2 - unitHeight*vCamera/2 - w;
-    for(int i = height-1; i >= 0; i--) {
-        for(int j = 0; j < width; j++) {
-            float u = float(j) / (width-1);
-            float v = float(i) / (height-1);
-            tempX.push_back(
-                Ray(cameraVectors.at(2),
-                lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2)));
-        }
-        rays.push_back(tempX);
-        tempX.clear();
-    }
-    return rays;
-}
-
-int RayTracer::getColors(const vector<vector<Ray>>& rays, const OutputVariable* output, const HittableList& hittableList, const vector<LightVariable*> lightVector)
-{
     vector<vector<color>> colors;
     vector<color> tempX;
-    for(vector<Ray> y : rays) {
-        for(Ray x : y) {
-            color temp = rayColor(x, output, hittableList, lightVector, 0);
-            clamp(temp);
-            tempX.push_back(temp);
+    for(int i = height-1; i >= 0; i--) {
+        for(int j = 0; j < width; j++) {
+            float u, v;
+            if(output->isAntialiasing()) {
+                color color(0, 0, 0);
+                if(output->isRaysPerPixelInit()) {
+                    vector<unsigned int> rpp = output->getRaysPerPixel();
+                    switch (rpp.size())
+                    {
+                        case 1:
+                            for(int k = 0; k < rpp.at(1); k++) {
+                                u = (j + randomFloat()) / (width-1);
+                                v = (i + randomFloat()) / (height-1);
+                                color += rayColor(
+                                    Ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2)),
+                                    output,
+                                    hittableList,
+                                    lightVector,
+                                    0
+                                );
+                            }
+                            gamma(color, rpp.at(0));
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                clamp(color);
+                tempX.push_back(color);
+            } else {
+                u = float(j) / (width-1);
+                v = float(i) / (height-1);
+                color color = rayColor(
+                    Ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2)),
+                    output,
+                    hittableList,
+                    lightVector,
+                    0
+                );
+                clamp(color);
+                tempX.push_back(color);
+            }
         }
         colors.push_back(tempX);
         tempX.clear();
     }
+
     return save_ppm(output->getFilename(), colors, output->getSize().at(0), output->getSize().at(1));
 }
 
@@ -59,22 +79,30 @@ int RayTracer::save_ppm(std::string file_name, const vector<vector<color>>& colo
     return 0;
 }
 
+void RayTracer::gamma(color &color, unsigned int rpp)
+{
+    float scale = 1.0 / rpp;
+    color.x() *= scale;
+    color.y() *= scale;
+    color.z() *= scale;
+}
+
 RayTracer::RayTracer(nlohmann::json parsedJson)
 {
     this->parsedJson = parsedJson;
 }
 
-void RayTracer::clamp(point3& color)
+void RayTracer::clamp(color& color)
 {
     if(color.x() < (float) 0.0) color.x() = 0.0;
-    else if(color.x() > (float) 1.0) color.x() = 1.0;
+    else if(color.x() > (float) 0.999) color.x() = 0.999;
     if(color.y() < (float) 0.0) color.y() = 0.0;
-    else if(color.y() > (float) 1.0) color.y() = 1.0;
+    else if(color.y() > (float) 0.999) color.y() = 0.999;
     if(color.z() < (float) 0.0) color.z() = 0.0;
-    else if(color.z() > (float) 1.0) color.z() = 1.0;
+    else if(color.z() > (float) 0.999) color.z() = 0.999;
 }
 
-point3 RayTracer::rayColor(Ray ray, const OutputVariable *output, const HittableList &hittableList, const vector<LightVariable *> lightVector, int bounce)
+point3 RayTracer::rayColor(Ray ray, const OutputVariable *output, const HittableList &hittableList, const vector<LightVariable *> lightVector, int maxBounce)
 {
     hit_record rec;
     if(hittableList.hit(ray, 0.01, std::numeric_limits<float>::infinity(), rec)) {
@@ -88,9 +116,8 @@ point3 RayTracer::rayColor(Ray ray, const OutputVariable *output, const Hittable
             array<point3, 2> intensities = light->getIntensities(); // id, is
             if(light->getType() == "point") {
                 PointLight* pointLight = (PointLight*) light;
-                vec3 tempL = pointLight->getCentre() - rec.p;
-                if (!hittableList.hitBeforeLight(Ray(rec.p, tempL), 0.01, tempL.norm())) {
-                    vec3 L = tempL.normalized();
+                vec3 L = (pointLight->getCentre() - rec.p).normalized();
+                if (!hittableList.hitBeforeLight(Ray(rec.p, L), 0.01, std::numeric_limits<float>::infinity())) {
                     float lambertian = max(rec.normal.dot(L), (float) 0.0);
                     diffuseColor += intensities.at(0).cwiseProduct(rec.colors.at(1)) * rec.colorCoefficients.at(1) * lambertian;
                     float specular = 0.0;
@@ -103,9 +130,9 @@ point3 RayTracer::rayColor(Ray ray, const OutputVariable *output, const Hittable
             }
         }
         color temp = ambientColor + diffuseColor + specularColor;
-        if(bounce < 10 && output->isGlobalIllum()) {
+        if(maxBounce > 0) {
             point3 target = rec.p + rec.normal + randomVectorInHemisphere(rec.normal);
-            temp = temp.cwiseProduct(rayColor(Ray(rec.p, target - rec.p), output, hittableList, lightVector, bounce+1));
+            temp = temp.cwiseProduct(rayColor(Ray(rec.p, target - rec.p), output, hittableList, lightVector, maxBounce-1));
         }
         return temp;
         
@@ -122,20 +149,18 @@ void RayTracer::run() {
     cout << "Scene object created" << endl;
     vector<OutputVariable*> outputs = scene.getOutputVector();
     vector<GeometryVariable*> geometryVector = scene.getGeometryVector();
+    HittableList world;
+    for(GeometryVariable* geometry : geometryVector) {
+        if(geometry->getType() == "sphere") {
+            world.add(make_shared<SphereGeometry>(*((SphereGeometry*) geometry)));
+        }
+        if(geometry->getType() == "rectangle") {
+            world.add(make_shared<RectangleGeometry>(*((RectangleGeometry*) geometry)));
+        }
+    }
     for(const OutputVariable* output : outputs) {
         cout << "Rendering output " << output->getFilename() << endl;
-        vector<vector<Ray>> rays = initRays(output);
-        cout << "\tRays for each pixel have been initialized" << endl;
-        HittableList world;
-        for(GeometryVariable* geometry : geometryVector) {
-            if(geometry->getType() == "sphere") {
-                world.add(make_shared<SphereGeometry>(*((SphereGeometry*) geometry)));
-            }
-            if(geometry->getType() == "rectangle") {
-                world.add(make_shared<RectangleGeometry>(*((RectangleGeometry*) geometry)));
-            }
-        }
-        int success = getColors(rays, output, world, scene.getLightVector());
+        int result = initRays(output, world, scene.getLightVector());
         cout << "\tOutput done" << endl;
         world.clear();
     }

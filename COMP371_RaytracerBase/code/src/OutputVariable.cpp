@@ -116,6 +116,20 @@ color OutputVariable::getAmbientIntensity() const
 
 bool OutputVariable::isGlobalIllum() const
 {
-    if(this->globalillumInit) return this->globalillum;
-    return false;
+    return this->globalillum;
+}
+
+bool OutputVariable::isAntialiasing() const
+{
+    return this->antialiasing;
+}
+
+bool OutputVariable::isRaysPerPixelInit() const
+{
+    return this->raysperpixelInit;
+}
+
+vector<unsigned int> OutputVariable::getRaysPerPixel() const
+{
+    return this->raysperpixel;
 }
