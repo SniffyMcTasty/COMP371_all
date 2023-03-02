@@ -25,7 +25,7 @@ OutputVariable::OutputVariable(nlohmann::json parsedJson)
         if(!this->raysperpixel.empty()) this->raysperpixelInit = true;
     } catch (...) {}
     try {
-        this->antialiasing = parsedJson["raysperpixel"];
+        this->antialiasing = parsedJson["antialiasing"];
         this->antialiasingInit = true;
     } catch (...) {}
     try {

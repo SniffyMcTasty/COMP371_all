@@ -22,24 +22,58 @@ int RayTracer::initRays(const OutputVariable* output, const HittableList& hittab
                 color color(0, 0, 0);
                 if(output->isRaysPerPixelInit()) {
                     vector<unsigned int> rpp = output->getRaysPerPixel();
-                    switch (rpp.size())
+                    if(rpp.size() == 1)
                     {
-                        case 1:
-                            for(int k = 0; k < rpp.at(1); k++) {
-                                u = (j + randomFloat()) / (width-1);
-                                v = (i + randomFloat()) / (height-1);
-                                color += rayColor(
-                                    Ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2)),
-                                    output,
-                                    hittableList,
-                                    lightVector,
-                                    0
-                                );
+                        for(int k = 0; k < rpp.at(0); k++) {
+                            u = (j + randomFloat()) / (width-1);
+                            v = (i + randomFloat()) / (height-1);
+                            color += rayColor(
+                                Ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2)),
+                                output,
+                                hittableList,
+                                lightVector,
+                                0
+                            );
+                        }
+                        gamma(color, rpp.at(0));
+                    }
+                    else if(rpp.size() == 2) {
+                        float strat = 1.0 / rpp.at(0);
+                        for(int k = 0; k < rpp.at(0); k++) {
+                            for(int l = 0; l < rpp.at(0); l++) {
+                                for(int m = 0; m < rpp.at(1); m++) {
+                                    u = (j + l*strat + randomFloat()) / (width-1);
+                                    v = (i + k*strat + randomFloat()) / (height-1);
+                                    color += rayColor(
+                                        Ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2)),
+                                        output,
+                                        hittableList,
+                                        lightVector,
+                                        0
+                                    );
+                                }
                             }
-                            gamma(color, rpp.at(0));
-                            break;
-                        default:
-                            break;
+                        }
+                        gamma(color, rpp.at(0) * rpp.at(0) * rpp.at(1));
+                    }
+                    else {
+                        float strat = 1.0 / rpp.at(0);
+                        for(int k = 0; k < rpp.at(0); k++) {
+                            for(int l = 0; l < rpp.at(1); l++) {
+                                for(int m = 0; m < rpp.at(2); m++) {
+                                    u = (j + l*strat + randomFloat()) / (width-1);
+                                    v = (i + k*strat + randomFloat()) / (height-1);
+                                    color += rayColor(
+                                        Ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2)),
+                                        output,
+                                        hittableList,
+                                        lightVector,
+                                        0
+                                    );
+                                }
+                            }
+                        }
+                        gamma(color, rpp.at(0) * rpp.at(1) * rpp.at(2));
                     }
                 }
                 clamp(color);
@@ -146,7 +180,6 @@ RayTracer::~RayTracer()
 
 void RayTracer::run() {
     Scene scene = Scene(this->parsedJson);
-    cout << "Scene object created" << endl;
     vector<OutputVariable*> outputs = scene.getOutputVector();
     vector<GeometryVariable*> geometryVector = scene.getGeometryVector();
     HittableList world;
@@ -158,10 +191,13 @@ void RayTracer::run() {
             world.add(make_shared<RectangleGeometry>(*((RectangleGeometry*) geometry)));
         }
     }
+    time_t tstart, tend;
     for(const OutputVariable* output : outputs) {
         cout << "Rendering output " << output->getFilename() << endl;
+        tstart = time(0);
         int result = initRays(output, world, scene.getLightVector());
-        cout << "\tOutput done" << endl;
-        world.clear();
+        tend = time(0);
+        cout << "Output done in " << difftime(tend, tstart) << " seconds" << endl;
     }
+    world.clear();
 }

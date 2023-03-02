@@ -18,6 +18,7 @@
 #include <cmath>
 #include "PointLight.h"
 #include "Utils.h"
+#include <ctime>
 
 using color = Eigen::Vector3f;
 
