@@ -6,6 +6,10 @@ AreaLight::AreaLight(nlohmann::json parsedJson) : LightVariable(parsedJson)
     this->p2 = parsedJson["p2"];
     this->p3 = parsedJson["p3"];
     this->p4 = parsedJson["p4"];
+    try {
+        for(unsigned int i : parsedJson["areasampling"]) this->areasampling.push_back(i);
+        if(!this->areasampling.empty()) this->areasamplingInit = true;
+    } catch (...) {}
 }
 
 AreaLight::~AreaLight()
