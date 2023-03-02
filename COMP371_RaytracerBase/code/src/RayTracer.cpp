@@ -82,9 +82,9 @@ int RayTracer::save_ppm(std::string file_name, const vector<vector<color>>& colo
 void RayTracer::gamma(color &color, unsigned int rpp)
 {
     float scale = 1.0 / rpp;
-    color.x() *= scale;
-    color.y() *= scale;
-    color.z() *= scale;
+    color.x() = sqrt(scale * color.x());
+    color.y() = sqrt(scale * color.y());
+    color.z() = sqrt(scale * color.z());
 }
 
 RayTracer::RayTracer(nlohmann::json parsedJson)
