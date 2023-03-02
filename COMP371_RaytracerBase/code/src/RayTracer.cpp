@@ -77,7 +77,7 @@ void RayTracer::clamp(point3& color)
 point3 RayTracer::rayColor(Ray ray, const OutputVariable *output, const HittableList &hittableList, const vector<LightVariable *> lightVector, int bounce)
 {
     hit_record rec;
-    if(hittableList.hit(ray, 0.01, std::numeric_limits<double>::infinity(), rec)) {
+    if(hittableList.hit(ray, 0.01, std::numeric_limits<float>::infinity(), rec)) {
         point3 ambientColor = output->getAmbientIntensity().cwiseProduct(rec.colors.at(0)) * rec.colorCoefficients.at(0);
         point3 diffuseColor;
         diffuseColor << 0, 0, 0;
@@ -88,15 +88,18 @@ point3 RayTracer::rayColor(Ray ray, const OutputVariable *output, const Hittable
             array<point3, 2> intensities = light->getIntensities(); // id, is
             if(light->getType() == "point") {
                 PointLight* pointLight = (PointLight*) light;
-                vec3 L = (pointLight->getCentre() - rec.p).normalized();
-                float lambertian = max(rec.normal.dot(L), (float) 0.0);
-                diffuseColor += intensities.at(0).cwiseProduct(rec.colors.at(1)) * rec.colorCoefficients.at(1) * lambertian;
-                float specular = 0.0;
-                if(lambertian > 0.0) {
-                    vec3 R = (2 * rec.normal * L.dot(rec.normal) - L).normalized();
-                    specular = pow(max(R.dot(V), (float) 0.0), rec.phongCoefficient);
+                vec3 tempL = pointLight->getCentre() - rec.p;
+                if (!hittableList.hitBeforeLight(Ray(rec.p, tempL), 0.01, tempL.norm())) {
+                    vec3 L = tempL.normalized();
+                    float lambertian = max(rec.normal.dot(L), (float) 0.0);
+                    diffuseColor += intensities.at(0).cwiseProduct(rec.colors.at(1)) * rec.colorCoefficients.at(1) * lambertian;
+                    float specular = 0.0;
+                    if(lambertian > 0.0) {
+                        vec3 R = (2 * rec.normal * L.dot(rec.normal) - L).normalized();
+                        specular = pow(max(R.dot(V), (float) 0.0), rec.phongCoefficient);
+                    }
+                    specularColor += intensities.at(1).cwiseProduct(rec.colors.at(2)) * rec.colorCoefficients.at(2) * specular;
                 }
-                specularColor += intensities.at(1).cwiseProduct(rec.colors.at(2)) * rec.colorCoefficients.at(2) * specular;
             }
         }
         color temp = ambientColor + diffuseColor + specularColor;

@@ -17,6 +17,7 @@ class HittableList {
         void add(shared_ptr<Hittable> object) { objects.push_back(object); }
 
         bool hit(const Ray& r, double t_min, double t_max, hit_record& rec) const;
+        bool hitBeforeLight(const Ray& r, double t_min, double t_max) const;
 
     public:
         std::vector<shared_ptr<Hittable>> objects;
@@ -39,6 +40,16 @@ inline bool HittableList::hit(const Ray& r, double t_min, double t_max, hit_reco
     }
 
     return hit_anything;
+}
+
+inline bool HittableList::hitBeforeLight(const Ray& r, double t_min, double t_max) const {
+    hit_record temp_rec;
+
+    for (const auto& object : objects) {
+        if (object->hit(r, t_min, t_max, temp_rec)) return true;
+    }
+
+    return false;
 }
 
 #endif
