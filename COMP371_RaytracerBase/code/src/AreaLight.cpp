@@ -36,6 +36,14 @@ string AreaLight::toString() const
     for(float i : this->p4) {
         ss << to_string(i) << " ";
     }
-    ss << "\n\t}";
+    ss << "\n";
+
+    if(areasamplingInit) {
+        ss << "\n\t\traysperpixel: ";
+        for(unsigned int i : this->areasampling) ss << to_string(i) << " ";
+        ss << "\n";
+    }
+    ss << "\t}";
+
     return ss.str();
 }
