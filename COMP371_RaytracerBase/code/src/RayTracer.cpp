@@ -1,6 +1,6 @@
 #include "RayTracer.h"
 
-int RayTracer::initRays(const OutputVariable* output, const HittableList& hittableList, const vector<LightVariable*> lightVector)
+int RayTracer::initRays(OutputVariable* output, HittableList& hittableList, vector<LightVariable*> lightVector)
 {
     unsigned int height = output->getSize().at(1);
     unsigned int width = output->getSize().at(0);
@@ -17,9 +17,11 @@ int RayTracer::initRays(const OutputVariable* output, const HittableList& hittab
     vector<color> tempX;
     for(int i = height-1; i >= 0; i--) {
         for(int j = 0; j < width; j++) {
+            vector<thread> innerThreads;
+            vector<future<color>> innerFutures;
             float u, v;
+            color pixelColor(0, 0, 0);
             if(output->isAntialiasing()) {
-                color color(0, 0, 0);
                 if(output->isRaysPerPixelInit()) {
                     vector<unsigned int> rpp = output->getRaysPerPixel();
                     if(rpp.size() == 1)
@@ -27,15 +29,23 @@ int RayTracer::initRays(const OutputVariable* output, const HittableList& hittab
                         for(int k = 0; k < rpp.at(0); k++) {
                             u = (j + randomFloat()) / (width-1);
                             v = (i + randomFloat()) / (height-1);
-                            color += rayColor(
+                            promise<color> innerP;
+                            innerFutures.push_back(innerP.get_future());
+                            innerThreads.push_back(thread(
+                                &RayTracer::rayColor,
                                 Ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2)),
                                 output,
                                 hittableList,
                                 lightVector,
-                                0
-                            );
+                                0,
+                                move(innerP)
+                            ));
                         }
-                        gamma(color, rpp.at(0));
+                        for(int z = 0; z < innerThreads.size(); z++) {
+                            if(innerThreads.at(z).joinable()) innerThreads.at(z).join();
+                            pixelColor += innerFutures.at(z).get();
+                        }
+                        gamma(pixelColor, rpp.at(0));
                     }
                     else if(rpp.size() == 2) {
                         float strat = 1.0 / rpp.at(0);
@@ -44,17 +54,25 @@ int RayTracer::initRays(const OutputVariable* output, const HittableList& hittab
                                 for(int m = 0; m < rpp.at(1); m++) {
                                     u = (j + l*strat + randomFloat()) / (width-1);
                                     v = (i + k*strat + randomFloat()) / (height-1);
-                                    color += rayColor(
+                                    promise<color> innerP;
+                                    innerFutures.push_back(innerP.get_future());
+                                    innerThreads.push_back(thread(
+                                        &RayTracer::rayColor,
                                         Ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2)),
                                         output,
                                         hittableList,
                                         lightVector,
-                                        0
-                                    );
+                                        0,
+                                        move(innerP)
+                                    ));
                                 }
                             }
                         }
-                        gamma(color, rpp.at(0) * rpp.at(0) * rpp.at(1));
+                        for(int z = 0; z < innerThreads.size(); z++) {
+                            if(innerThreads.at(z).joinable()) innerThreads.at(z).join();
+                            pixelColor += innerFutures.at(z).get();
+                        }
+                        gamma(pixelColor, rpp.at(0) * rpp.at(0) * rpp.at(1));
                     }
                     else {
                         float strat = 1.0 / rpp.at(0);
@@ -63,34 +81,52 @@ int RayTracer::initRays(const OutputVariable* output, const HittableList& hittab
                                 for(int m = 0; m < rpp.at(2); m++) {
                                     u = (j + l*strat + randomFloat()) / (width-1);
                                     v = (i + k*strat + randomFloat()) / (height-1);
-                                    color += rayColor(
+                                    promise<color> innerP;
+                                    innerFutures.push_back(innerP.get_future());
+                                    innerThreads.push_back(thread(
+                                        &RayTracer::rayColor,
                                         Ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2)),
                                         output,
                                         hittableList,
                                         lightVector,
-                                        0
-                                    );
+                                        0,
+                                        move(innerP)
+                                    ));
                                 }
                             }
                         }
-                        gamma(color, rpp.at(0) * rpp.at(1) * rpp.at(2));
+                        for(int z = 0; z < innerThreads.size(); z++) {
+                            if(innerThreads.at(z).joinable()) innerThreads.at(z).join();
+                            pixelColor += innerFutures.at(z).get();
+                        }
+                        gamma(pixelColor, rpp.at(0) * rpp.at(1) * rpp.at(2));
                     }
                 }
-                clamp(color);
-                tempX.push_back(color);
+                clamp(pixelColor);
+                tempX.push_back(pixelColor);
             } else {
                 u = float(j) / (width-1);
                 v = float(i) / (height-1);
-                color color = rayColor(
+                promise<color> innerP;
+                innerFutures.push_back(innerP.get_future());
+                innerThreads.push_back(thread(
+                    &RayTracer::rayColor,
                     Ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2)),
                     output,
                     hittableList,
                     lightVector,
-                    0
-                );
-                clamp(color);
-                tempX.push_back(color);
+                    0,
+                    move(innerP)
+                ));
+                for(int z = 0; z < innerThreads.size(); z++) {
+                    if(innerThreads.at(z).joinable()) innerThreads.at(z).join();
+                    pixelColor += innerFutures.at(z).get();
+                }
+                clamp(pixelColor);
+                tempX.push_back(pixelColor);
             }
+            innerThreads.clear();
+            innerFutures.clear();
         }
         colors.push_back(tempX);
         tempX.clear();
@@ -129,14 +165,14 @@ RayTracer::RayTracer(nlohmann::json parsedJson)
 void RayTracer::clamp(color& color)
 {
     if(color.x() < (float) 0.0) color.x() = 0.0;
-    else if(color.x() > (float) 0.999) color.x() = 0.999;
+    else if(color.x() > (float) 1.0) color.x() = 1.0;
     if(color.y() < (float) 0.0) color.y() = 0.0;
-    else if(color.y() > (float) 0.999) color.y() = 0.999;
+    else if(color.y() > (float) 1.0) color.y() = 1.0;
     if(color.z() < (float) 0.0) color.z() = 0.0;
-    else if(color.z() > (float) 0.999) color.z() = 0.999;
+    else if(color.z() > (float) 1.0) color.z() = 1.0;
 }
 
-point3 RayTracer::rayColor(Ray ray, const OutputVariable *output, const HittableList &hittableList, const vector<LightVariable *> lightVector, int maxBounce)
+void RayTracer::rayColor(Ray ray, OutputVariable *output, HittableList &hittableList, vector<LightVariable *> lightVector, int maxBounce, promise<color> &&p)
 {
     hit_record rec;
     if(hittableList.hit(ray, 0.01, std::numeric_limits<float>::infinity(), rec)) {
@@ -166,12 +202,16 @@ point3 RayTracer::rayColor(Ray ray, const OutputVariable *output, const Hittable
         color temp = ambientColor + diffuseColor + specularColor;
         if(maxBounce > 0) {
             point3 target = rec.p + rec.normal + randomVectorInHemisphere(rec.normal);
-            temp = temp.cwiseProduct(rayColor(Ray(rec.p, target - rec.p), output, hittableList, lightVector, maxBounce-1));
+            promise<color> tempP;
+            auto f = tempP.get_future();
+            thread t(&RayTracer::rayColor, Ray(rec.p, target - rec.p), output, hittableList, lightVector, maxBounce-1, move(tempP));
+            if(t.joinable()) t.join();
+            temp = temp.cwiseProduct(f.get());
         }
-        return temp;
+        p.set_value(temp);
         
     }
-    else return output->getBkc();
+    else p.set_value(output->getBkc());
 }
 
 RayTracer::~RayTracer()
@@ -192,7 +232,7 @@ void RayTracer::run() {
         }
     }
     time_t tstart, tend;
-    for(const OutputVariable* output : outputs) {
+    for(OutputVariable* output : outputs) {
         cout << "Rendering output " << output->getFilename() << endl;
         tstart = time(0);
         int result = initRays(output, world, scene.getLightVector());
