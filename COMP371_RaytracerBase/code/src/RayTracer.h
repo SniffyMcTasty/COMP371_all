@@ -34,7 +34,7 @@ private:
     int save_ppm(std::string file_name, const vector<vector<color>>& colors, int dimx, int dimy);
     void gamma(color& color, unsigned int rpp);
     void clamp(color& color);
-    void rayColor(Ray ray, OutputVariable* output, HittableList& hittableList, vector<LightVariable*> lightVector, int maxBounce, promise<color> &&p);
+    color rayColor(Ray ray, OutputVariable* output, HittableList& hittableList, vector<LightVariable*> lightVector, int maxBounce);
 public:
     RayTracer(nlohmann::json parsedJson);
     ~RayTracer();
