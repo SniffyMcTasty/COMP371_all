@@ -15,10 +15,8 @@ int RayTracer::initRays(OutputVariable* output, HittableList& hittableList, vect
     point3 lowerLeftCorner = cameraVectors.at(2) - unitWidth*uCamera/2 - unitHeight*vCamera/2 - w;
     vector<vector<color>> colors;
     vector<color> tempX;
-    auto func = bind(&RayTracer::rayColor, this, placeholders::_1, placeholders::_2, placeholders::_3, placeholders::_4, placeholders::_5);
     for(int i = height-1; i >= 0; i--) {
         for(int j = 0; j < width; j++) {
-            //vector<thread> innerThreads;
             vector<future<color>> innerFutures;
             float u, v;
             color pixelColor(0, 0, 0);
@@ -30,16 +28,12 @@ int RayTracer::initRays(OutputVariable* output, HittableList& hittableList, vect
                         for(int k = 0; k < rpp.at(0); k++) {
                             u = (j + randomFloat()) / (width-1);
                             v = (i + randomFloat()) / (height-1);
-                            // promise<color> innerP;
-                            // innerFutures.push_back(innerP.get_future());
+                            Ray ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2));
                             innerFutures.push_back(async(
                                 launch::async,
-                                &RayTracer::rayColor,
-                                this,
-                                Ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2)),
-                                output,
-                                hittableList,
-                                lightVector,
+                                [ray, output, &hittableList, &lightVector, this](int maxBounce){
+                                    return rayColor(ray, output, hittableList, lightVector, maxBounce);
+                                },
                                 0
                             ));
                         }
@@ -55,17 +49,12 @@ int RayTracer::initRays(OutputVariable* output, HittableList& hittableList, vect
                                 for(int m = 0; m < rpp.at(1); m++) {
                                     u = (j + l*strat + randomFloat()) / (width-1);
                                     v = (i + k*strat + randomFloat()) / (height-1);
-                                    // promise<color> innerP;
-                                    // innerFutures.push_back(innerP.get_future());
+                                    Ray ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2));
                                     innerFutures.push_back(async(
                                         launch::async,
-                                        [this](Ray ray, OutputVariable *output, HittableList &hittableList, vector<LightVariable*> lightVector, int maxBounce){
+                                        [ray, output, &hittableList, &lightVector, this](int maxBounce){
                                             return rayColor(ray, output, hittableList, lightVector, maxBounce);
                                         },
-                                        Ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2)),
-                                        output,
-                                        hittableList,
-                                        lightVector,
                                         0
                                     ));
                                 }
@@ -83,15 +72,12 @@ int RayTracer::initRays(OutputVariable* output, HittableList& hittableList, vect
                                 for(int m = 0; m < rpp.at(2); m++) {
                                     u = (j + l*strat + randomFloat()) / (width-1);
                                     v = (i + k*strat + randomFloat()) / (height-1);
-                                    // promise<color> innerP;
-                                    // innerFutures.push_back(innerP.get_future());
+                                    Ray ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2));
                                     innerFutures.push_back(async(
                                         launch::async,
-                                        func,
-                                        Ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2)),
-                                        output,
-                                        hittableList,
-                                        lightVector,
+                                        [ray, output, &hittableList, &lightVector, this](int maxBounce){
+                                            return rayColor(ray, output, hittableList, lightVector, maxBounce);
+                                        },
                                         0
                                     ));
                                 }
@@ -103,13 +89,10 @@ int RayTracer::initRays(OutputVariable* output, HittableList& hittableList, vect
                         gamma(pixelColor, rpp.at(0) * rpp.at(1) * rpp.at(2));
                     }
                 }
-                clamp(pixelColor);
-                tempX.push_back(pixelColor);
+                cout << "Pixel [" << i << ", " << j << "] done";
             } else {
                 u = float(j) / (width-1);
                 v = float(i) / (height-1);
-                // promise<color> innerP;
-                // innerFutures.push_back(innerP.get_future());
                     pixelColor = rayColor(
                         Ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2)),
                         output,
@@ -117,10 +100,9 @@ int RayTracer::initRays(OutputVariable* output, HittableList& hittableList, vect
                         lightVector,
                         0
                     );
-                clamp(pixelColor);
-                tempX.push_back(pixelColor);
             }
-            // innerThreads.clear();
+            clamp(pixelColor);
+            tempX.push_back(pixelColor);
             if(!innerFutures.empty()) innerFutures.clear();
         }
         colors.push_back(tempX);
@@ -197,9 +179,6 @@ color RayTracer::rayColor(Ray ray, OutputVariable *output, HittableList &hittabl
         color temp = ambientColor + diffuseColor + specularColor;
         if(maxBounce > 0) {
             point3 target = rec.p + rec.normal + randomVectorInHemisphere(rec.normal);
-            // promise<color> tempP;
-            // auto f = tempP.get_future();
-            // if(t.joinable()) t.join();
             temp = temp.cwiseProduct(rayColor(Ray(rec.p, target - rec.p), output, hittableList, lightVector, maxBounce-1));
         }
         return temp;
