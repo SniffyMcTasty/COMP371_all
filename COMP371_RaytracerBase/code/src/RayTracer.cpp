@@ -14,102 +14,109 @@ int RayTracer::initRays(OutputVariable* output, HittableList& hittableList, vect
     float unitWidth = aspectRatio * unitHeight;
     point3 lowerLeftCorner = cameraVectors.at(2) - unitWidth*uCamera/2 - unitHeight*vCamera/2 - w;
     vector<vector<color>> colors;
-    vector<color> tempX;
+    vector<future<vector<color>>> futures;
     for(int i = height-1; i >= 0; i--) {
-        for(int j = 0; j < width; j++) {
-            vector<future<color>> innerFutures;
-            float u, v;
-            color pixelColor(0, 0, 0);
-            if(output->isAntialiasing()) {
-                if(output->isRaysPerPixelInit()) {
-                    vector<unsigned int> rpp = output->getRaysPerPixel();
-                    if(rpp.size() == 1)
-                    {
-                        for(int k = 0; k < rpp.at(0); k++) {
-                            u = (j + randomFloat()) / (width-1);
-                            v = (i + randomFloat()) / (height-1);
-                            Ray ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2));
-                            innerFutures.push_back(async(
-                                launch::async,
-                                [ray, output, &hittableList, &lightVector, this](int maxBounce){
-                                    return rayColor(ray, output, hittableList, lightVector, maxBounce);
-                                },
-                                0
-                            ));
-                        }
-                        for(int z = 0; z < innerFutures.size(); z++) {
-                            pixelColor += innerFutures.at(z).get();
-                        }
-                        gamma(pixelColor, rpp.at(0));
-                    }
-                    else if(rpp.size() == 2) {
-                        float strat = 1.0 / rpp.at(0);
-                        for(int k = 0; k < rpp.at(0); k++) {
-                            for(int l = 0; l < rpp.at(0); l++) {
-                                for(int m = 0; m < rpp.at(1); m++) {
-                                    u = (j + l*strat + randomFloat()) / (width-1);
-                                    v = (i + k*strat + randomFloat()) / (height-1);
-                                    Ray ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2));
-                                    innerFutures.push_back(async(
-                                        launch::async,
-                                        [ray, output, &hittableList, &lightVector, this](int maxBounce){
-                                            return rayColor(ray, output, hittableList, lightVector, maxBounce);
-                                        },
-                                        0
-                                    ));
-                                }
-                            }
-                        }
-                        for(int z = 0; z < innerFutures.size(); z++) {
-                            pixelColor += innerFutures.at(z).get();
-                        }
-                        gamma(pixelColor, rpp.at(0) * rpp.at(0) * rpp.at(1));
-                    }
-                    else {
-                        float strat = 1.0 / rpp.at(0);
-                        for(int k = 0; k < rpp.at(0); k++) {
-                            for(int l = 0; l < rpp.at(1); l++) {
-                                for(int m = 0; m < rpp.at(2); m++) {
-                                    u = (j + l*strat + randomFloat()) / (width-1);
-                                    v = (i + k*strat + randomFloat()) / (height-1);
-                                    Ray ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2));
-                                    innerFutures.push_back(async(
-                                        launch::async,
-                                        [ray, output, &hittableList, &lightVector, this](int maxBounce){
-                                            return rayColor(ray, output, hittableList, lightVector, maxBounce);
-                                        },
-                                        0
-                                    ));
-                                }
-                            }
-                        }
-                        for(int z = 0; z < innerFutures.size(); z++) {
-                            pixelColor += innerFutures.at(z).get();
-                        }
-                        gamma(pixelColor, rpp.at(0) * rpp.at(1) * rpp.at(2));
-                    }
-                }
-                cout << "Pixel [" << i << ", " << j << "] done";
-            } else {
-                u = float(j) / (width-1);
-                v = float(i) / (height-1);
-                    pixelColor = rayColor(
-                        Ray(cameraVectors.at(2), lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - cameraVectors.at(2)),
-                        output,
-                        hittableList,
-                        lightVector,
-                        0
-                    );
-            }
-            clamp(pixelColor);
-            tempX.push_back(pixelColor);
-            if(!innerFutures.empty()) innerFutures.clear();
-        }
-        colors.push_back(tempX);
-        tempX.clear();
+        futures.push_back(async(launch::async,
+            [output, &hittableList, &lightVector, this]
+            (int i, point3 lowerLeftCorner, unsigned int width, float unitWidth, vec3 uCamera, unsigned int height, float unitHeight, vec3 vCamera, point3 origin)
+            {
+                return horizontalRays(output, hittableList, lightVector, i, lowerLeftCorner, width, unitWidth, uCamera, height, unitHeight, vCamera, origin);
+            },
+            i,
+            lowerLeftCorner,
+            width,
+            unitWidth,
+            uCamera,
+            height,
+            unitHeight,
+            vCamera,
+            cameraVectors.at(2)
+        ));
     }
-
+    for(int z = 0; z < futures.size(); z++) {
+        colors.push_back(futures.at(z).get());
+    }
     return save_ppm(output->getFilename(), colors, output->getSize().at(0), output->getSize().at(1));
+}
+
+vector<color> RayTracer::horizontalRays(OutputVariable *output, HittableList &hittableList, vector<LightVariable *> lightVector, int i, point3 lowerLeftCorner, unsigned int width, float unitWidth, vec3 uCamera, unsigned int height, float unitHeight, vec3 vCamera, point3 origin)
+{
+    vector<color> tempX;
+    for(int j = 0; j < width; j++) {
+        float u, v;
+        color pixelColor(0, 0, 0);
+        if(output->isAntialiasing()) {
+            if(output->isRaysPerPixelInit()) {
+                vector<unsigned int> rpp = output->getRaysPerPixel();
+                if(rpp.size() == 1)
+                {
+                    for(int k = 0; k < rpp.at(0); k++) {
+                        u = (j + randomFloat()) / (width-1);
+                        v = (i + randomFloat()) / (height-1);
+                        pixelColor += rayColor(
+                            Ray(origin, lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - origin),
+                            output,
+                            hittableList,
+                            lightVector,
+                            0
+                        );
+                    }
+                    gamma(pixelColor, rpp.at(0));
+                }
+                else if(rpp.size() == 2) {
+                    float strat = 1.0 / rpp.at(0);
+                    for(int k = 0; k < rpp.at(0); k++) {
+                        for(int l = 0; l < rpp.at(0); l++) {
+                            for(int m = 0; m < rpp.at(1); m++) {
+                                u = (j + l*strat + randomFloat()) / (width-1);
+                                v = (i + k*strat + randomFloat()) / (height-1);
+                                pixelColor += rayColor(
+                                    Ray(origin, lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - origin),
+                                    output,
+                                    hittableList,
+                                    lightVector,
+                                    0
+                                );
+                            }
+                        }
+                    }
+                    gamma(pixelColor, rpp.at(0) * rpp.at(0) * rpp.at(1));
+                }
+                else {
+                    float strat = 1.0 / rpp.at(0);
+                    for(int k = 0; k < rpp.at(0); k++) {
+                        for(int l = 0; l < rpp.at(1); l++) {
+                            for(int m = 0; m < rpp.at(2); m++) {
+                                u = (j + l*strat + randomFloat()) / (width-1);
+                                v = (i + k*strat + randomFloat()) / (height-1);
+                                pixelColor += rayColor(
+                                    Ray(origin, lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - origin),
+                                    output,
+                                    hittableList,
+                                    lightVector,
+                                    0
+                                );
+                            }
+                        }
+                    }
+                    gamma(pixelColor, rpp.at(0) * rpp.at(1) * rpp.at(2));
+                }
+            }
+        } else {
+            u = float(j) / (width-1);
+            v = float(i) / (height-1);
+                pixelColor = rayColor(
+                    Ray(origin, lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - origin),
+                    output,
+                    hittableList,
+                    lightVector,
+                    0
+                );
+        }
+        clamp(pixelColor);
+        tempX.push_back(pixelColor);
+    }
+    return tempX;
 }
 
 int RayTracer::save_ppm(std::string file_name, const vector<vector<color>>& colors, int dimx, int dimy) {

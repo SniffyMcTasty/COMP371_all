@@ -19,7 +19,12 @@
 #include "PointLight.h"
 #include "Utils.h"
 #include <ctime>
-#include <thread>
+#ifdef linux
+    #include <pthread.h>
+#endif
+#ifdef _WIN32
+    #include <thread>
+#endif
 #include <future>
 
 using color = Eigen::Vector3f;
@@ -31,6 +36,13 @@ class RayTracer
 private:
     nlohmann::json parsedJson;
     int initRays(OutputVariable* output, HittableList& hittableList, vector<LightVariable*> lightVector); // Rays for every pixel (Output -> yPosition -> xPosition)
+    vector<color> horizontalRays(OutputVariable* output, HittableList& hittableList, vector<LightVariable*> lightVector,
+        int i,
+        point3 lowerLeftCorner,
+        unsigned int width, float unitWidth, vec3 uCamera,
+        unsigned int height, float unitHeight, vec3 vCamera,
+        point3 origin
+    );
     int save_ppm(std::string file_name, const vector<vector<color>>& colors, int dimx, int dimy);
     void gamma(color& color, unsigned int rpp);
     void clamp(color& color);

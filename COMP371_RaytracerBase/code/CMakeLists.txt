@@ -55,3 +55,8 @@ aux_source_directory(src SOURCE)
 
 add_executable(raytracer main.cpp ${SOURCE}) #The name of the cpp file and its path can vary
 
+#Threads setup
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+target_link_libraries(raytracer PRIVATE Threads::Threads)
+
