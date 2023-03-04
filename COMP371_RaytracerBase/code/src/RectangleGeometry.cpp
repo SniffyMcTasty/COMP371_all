@@ -45,7 +45,7 @@ bool RectangleGeometry::hit(const Ray &r, double t_min, double t_max, hit_record
     if(outsideP3P1 < 0) {
         float outsideP3P4 = (this->p4 - this->p3).cross(Q - this->p3).dot(normal);
         float outsideP4P1 = (this->p1 - this->p4).cross(Q - this->p4).dot(normal);
-        if(outsideP3P4 < 0 || outsideP4P1 < 0) return false; 
+        if(outsideP3P4 < 0 || outsideP4P1 < 0) return false;
     }
 
     rec.t = t;
