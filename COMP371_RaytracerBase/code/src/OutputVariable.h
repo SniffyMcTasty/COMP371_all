@@ -8,6 +8,7 @@
 #include "../external/json.hpp"
 #include <Eigen/Core>
 #include <Eigen/Dense>
+#include "Utils.h"
 
 using vec3 = Eigen::Vector3f;
 using color = Eigen::Vector3f;
@@ -33,6 +34,8 @@ private:
     bool twosiderenderInit = false;
     bool globalillum;
     bool globalillumInit = false;
+    unsigned int maxbounce = MAX_BOUNCE;
+    bool maxbounceInit = false;
 public:
     OutputVariable(nlohmann::json parsedJson);
     ~OutputVariable();
@@ -47,6 +50,7 @@ public:
     bool isAntialiasing() const;
     bool isRaysPerPixelInit() const;
     vector<unsigned int> getRaysPerPixel() const;
+    unsigned int getMaxBounce() const;
 };
 
 #endif

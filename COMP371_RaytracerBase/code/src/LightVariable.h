@@ -25,12 +25,15 @@ private:
     bool transformInit = false;
     vector<unsigned int> areasampling; // 1, 2 or 3 values
     bool areasamplingInit = false;
+    bool used = true;
 public:
     LightVariable(nlohmann::json parsedJson);
     ~LightVariable();
     virtual string toString() const;
     string getType() const;
     array<point3, 2> getIntensities() const;
+    bool isUsed() const;
+    virtual point3 getCentre() const = 0;
 };
 
 #endif

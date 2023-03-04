@@ -45,7 +45,18 @@ vector<color> RayTracer::horizontalRays(OutputVariable *output, HittableList &hi
     for(int j = 0; j < width; j++) {
         float u, v;
         color pixelColor(0, 0, 0);
-        if(output->isAntialiasing()) {
+        if(output->isGlobalIllum()) {
+            u = float(j) / (width-1);
+            v = float(i) / (height-1);
+            pixelColor += rayColor(
+                Ray(origin, lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - origin),
+                output,
+                hittableList,
+                lightVector,
+                output->getMaxBounce()
+            );
+        }
+        else if(output->isAntialiasing()) {
             if(output->isRaysPerPixelInit()) {
                 vector<unsigned int> rpp = output->getRaysPerPixel();
                 if(rpp.size() == 1)
@@ -102,16 +113,17 @@ vector<color> RayTracer::horizontalRays(OutputVariable *output, HittableList &hi
                     gamma(pixelColor, rpp.at(0) * rpp.at(1) * rpp.at(2));
                 }
             }
+            // TODO: make default value for rays per pixel if not specified
         } else {
             u = float(j) / (width-1);
             v = float(i) / (height-1);
-                pixelColor = rayColor(
-                    Ray(origin, lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - origin),
-                    output,
-                    hittableList,
-                    lightVector,
-                    0
-                );
+            pixelColor += rayColor(
+                Ray(origin, lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - origin),
+                output,
+                hittableList,
+                lightVector,
+                0
+            );
         }
         clamp(pixelColor);
         tempX.push_back(pixelColor);
@@ -167,19 +179,39 @@ color RayTracer::rayColor(Ray ray, OutputVariable *output, HittableList &hittabl
         specularColor << 0, 0, 0;
         vec3 V = (-ray.getDirection()).normalized();
         for(const LightVariable* light : lightVector) {
-            array<point3, 2> intensities = light->getIntensities(); // id, is
-            if(light->getType() == "point") {
-                PointLight* pointLight = (PointLight*) light;
-                vec3 L = (pointLight->getCentre() - rec.p).normalized();
-                if (!hittableList.hitBeforeLight(Ray(rec.p, L), 0.01, std::numeric_limits<float>::infinity())) {
-                    float lambertian = max(rec.normal.dot(L), (float) 0.0);
-                    diffuseColor += intensities.at(0).cwiseProduct(rec.colors.at(1)) * rec.colorCoefficients.at(1) * lambertian;
-                    float specular = 0.0;
-                    if(lambertian > 0.0) {
-                        vec3 R = (2 * rec.normal * L.dot(rec.normal) - L).normalized();
-                        specular = pow(max(R.dot(V), (float) 0.0), rec.phongCoefficient);
+            if(light->isUsed()) {
+                array<point3, 2> intensities = light->getIntensities(); // id, is
+                string lightType = light->getType();
+                if(lightType == "point") {
+                    vec3 L = (light->getCentre() - rec.p).normalized();
+                    if (!hittableList.hitBeforeLight(Ray(rec.p, L), 0.01, std::numeric_limits<float>::infinity())) {
+                        float lambertian = max(rec.normal.dot(L), (float) 0.0);
+                        diffuseColor += intensities.at(0).cwiseProduct(rec.colors.at(1)) * rec.colorCoefficients.at(1) * lambertian;
+                        if(!output->isGlobalIllum()) {
+                            float specular = 0.0;
+                            if(lambertian > 0.0) {
+                                vec3 R = (2 * rec.normal * L.dot(rec.normal) - L).normalized();
+                                specular = pow(max(R.dot(V), (float) 0.0), rec.phongCoefficient);
+                            }
+                            specularColor += intensities.at(1).cwiseProduct(rec.colors.at(2)) * rec.colorCoefficients.at(2) * specular;
+                        }
                     }
-                    specularColor += intensities.at(1).cwiseProduct(rec.colors.at(2)) * rec.colorCoefficients.at(2) * specular;
+                } else if (lightType == "area" && output->isGlobalIllum()) {
+                    vec3 L = (light->getCentre() - rec.p).normalized();
+                    if (!hittableList.hitBeforeLight(Ray(rec.p, L), 0.01, std::numeric_limits<float>::infinity())) {
+                        float lambertian = max(rec.normal.dot(L), (float) 0.0);
+                        diffuseColor += intensities.at(0).cwiseProduct(rec.colors.at(1)) * rec.colorCoefficients.at(1) * lambertian;
+                        if(!output->isGlobalIllum()) {
+                            float specular = 0.0;
+                            if(lambertian > 0.0) {
+                                vec3 R = (2 * rec.normal * L.dot(rec.normal) - L).normalized();
+                                specular = pow(max(R.dot(V), (float) 0.0), rec.phongCoefficient);
+                            }
+                            specularColor += intensities.at(1).cwiseProduct(rec.colors.at(2)) * rec.colorCoefficients.at(2) * specular;
+                        }
+                    }
+                } else {
+                    AreaLight* areaLight = (AreaLight*) light;
                 }
             }
         }

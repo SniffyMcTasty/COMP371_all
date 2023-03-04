@@ -17,6 +17,9 @@ LightVariable::LightVariable(nlohmann::json parsedJson)
         for(unsigned int i : parsedJson["areasampling"]) this->areasampling.push_back(i);
         if(!this->areasampling.empty()) this->areasamplingInit = true;
     } catch (...) {}
+    try {
+        this->used = parsedJson["use"];
+    } catch (...) {}
 }
 
 LightVariable::~LightVariable()
@@ -30,6 +33,7 @@ string LightVariable::toString() const
     ss << "\n\t\ttype: " << this->type;
     ss << "\n\t\tid: " << this->id.transpose();
     ss << "\n\t\tis: " << this->is.transpose();
+    ss << "\n\t\tused: " << boolalpha << this->used;
     ss << "\n";
 
     /* Optional args */
@@ -58,4 +62,9 @@ string LightVariable::getType() const
 array<point3, 2> LightVariable::getIntensities() const
 {
     return array<point3, 2>{this->id, this->is};
+}
+
+bool LightVariable::isUsed() const
+{
+    return this->used;
 }

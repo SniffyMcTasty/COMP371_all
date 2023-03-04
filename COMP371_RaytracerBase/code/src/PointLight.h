@@ -18,7 +18,7 @@ public:
     PointLight(nlohmann::json parsedJson);
     ~PointLight();
     virtual string toString() const override;
-    point3 getCentre() const;
+    point3 getCentre() const override;
 };
 
 #endif

@@ -36,6 +36,10 @@ OutputVariable::OutputVariable(nlohmann::json parsedJson)
         this->globalillum = parsedJson["globalillum"];
         this->globalillumInit = true;
     } catch (...) {}
+    try {
+        this->maxbounce = parsedJson["maxbounce"];
+        this->maxbounceInit = true;
+    } catch (...) {}
 }
 
 OutputVariable::~OutputVariable()
@@ -77,6 +81,11 @@ string OutputVariable::toString() const
     if(globalillumInit) {
         if(!raysperpixelInit && !antialiasingInit && !twosiderenderInit) ss << "\n";
         ss << "\t\tglobalillum: " << this->globalillum << "\n";
+    }
+
+    if(maxbounceInit) {
+        if(!raysperpixelInit && !antialiasingInit && !twosiderenderInit && !globalillumInit) ss << "\n";
+        ss << "\t\tmaxbounce: " << this->maxbounce << "\n";
     }
 
     ss << "\t}";
@@ -132,4 +141,9 @@ bool OutputVariable::isRaysPerPixelInit() const
 vector<unsigned int> OutputVariable::getRaysPerPixel() const
 {
     return this->raysperpixel;
+}
+
+unsigned int OutputVariable::getMaxBounce() const
+{
+    return this->maxbounce;
 }
