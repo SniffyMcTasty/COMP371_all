@@ -16,7 +16,7 @@ int RayTracer::initRays(OutputVariable* output, HittableList& hittableList, vect
     vector<vector<color>> colors;
     vector<future<vector<color>>> futures;
     for(int i = height-1; i >= 0; i--) {
-        futures.push_back(async(launch::async,
+        futures.push_back(async(launch::async | launch::deferred,
             [output, &hittableList, &lightVector, this]
             (int i, point3 lowerLeftCorner, unsigned int width, float unitWidth, vec3 uCamera, unsigned int height, float unitHeight, vec3 vCamera, point3 origin)
             {
