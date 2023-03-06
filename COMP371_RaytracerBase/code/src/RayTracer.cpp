@@ -190,8 +190,8 @@ color RayTracer::rayColor(Ray ray, OutputVariable *output, HittableList &hittabl
                         if(!output->isGlobalIllum()) {
                             float specular = 0.0;
                             if(lambertian > 0.0) {
-                                vec3 R = (2 * rec.normal * L.dot(rec.normal) - L).normalized();
-                                specular = pow(max(R.dot(V), (float) 0.0), rec.phongCoefficient);
+                                //vec3 R = (2 * rec.normal * L.dot(rec.normal) - L).normalized();
+                                specular = pow(max(rec.normal.dot((L+V).normalized()), (float) 0.0), rec.phongCoefficient);
                             }
                             specularColor += intensities.at(1).cwiseProduct(rec.colors.at(2)) * rec.colorCoefficients.at(2) * specular;
                         }
