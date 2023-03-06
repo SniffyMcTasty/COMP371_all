@@ -8,10 +8,10 @@ OutputVariable::OutputVariable(nlohmann::json parsedJson)
     array<float, 3> temp;
     temp = parsedJson["up"];
     this->up << temp.at(0), temp.at(1), temp.at(2);
-    this->up.normalize();
+    //this->up.normalize();
     temp = parsedJson["lookat"];
     this->lookat << temp.at(0), temp.at(1), temp.at(2);
-    this->lookat.normalize();
+    //this->lookat.normalize();
     temp = parsedJson["centre"];
     this->centre << temp.at(0), temp.at(1), temp.at(2);
     temp = parsedJson["ai"];
