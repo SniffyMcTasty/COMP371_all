@@ -32,6 +32,20 @@ int RayTracer::initRays(OutputVariable* output, HittableList& hittableList, vect
             vCamera,
             cameraVectors.at(2)
         ));
+        // colors.push_back(horizontalRays(
+        //     output,
+        //     hittableList,
+        //     lightVector,
+        //     i,
+        //     lowerLeftCorner,
+        //     width,
+        //     unitWidth,
+        //     uCamera,
+        //     height,
+        //     unitHeight,
+        //     vCamera,
+        //     cameraVectors.at(2)
+        // ));
     }
     for(int z = 0; z < futures.size(); z++) {
         colors.push_back(futures.at(z).get());
