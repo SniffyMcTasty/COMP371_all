@@ -14,6 +14,7 @@ OutputVariable::OutputVariable(nlohmann::json parsedJson)
     //this->lookat.normalize();
     temp = parsedJson["centre"];
     this->centre << temp.at(0), temp.at(1), temp.at(2);
+    //this->centre.normalize();
     temp = parsedJson["ai"];
     this->ai << temp.at(0), temp.at(1), temp.at(2);
     temp = parsedJson["bkc"];

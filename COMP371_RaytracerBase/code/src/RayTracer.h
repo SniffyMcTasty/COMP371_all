@@ -44,7 +44,7 @@ private:
         point3 origin
     );
     int save_ppm(std::string file_name, const vector<vector<color>>& colors, int dimx, int dimy);
-    void gamma(color& color, unsigned int rpp);
+    void multiSample(color& color, unsigned int rpp);
     void clamp(color& color);
     color rayColor(Ray ray, OutputVariable* output, HittableList& hittableList, vector<LightVariable*> lightVector, int maxBounce);
 public:

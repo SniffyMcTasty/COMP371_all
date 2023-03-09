@@ -7,7 +7,7 @@ int RayTracer::initRays(OutputVariable* output, HittableList& hittableList, vect
     float aspectRatio = float(width) / float(height);
     array<vec3, 3> cameraVectors = output->getCameraVectors(); // up, lookat, centre
     float fov = output->getFov() * M_PI / 180;
-    vec3 w = (cameraVectors.at(2) - cameraVectors.at(1)).normalized();
+    vec3 w = (-cameraVectors.at(1)).normalized();
     vec3 uCamera = cameraVectors.at(0).cross(w).normalized();
     vec3 vCamera = w.cross(uCamera);
     float unitHeight = 2 * tan(fov / 2);
@@ -86,7 +86,7 @@ vector<color> RayTracer::horizontalRays(OutputVariable *output, HittableList &hi
                             0
                         );
                     }
-                    gamma(pixelColor, rpp.at(0));
+                    multiSample(pixelColor, rpp.at(0));
                 }
                 else if(rpp.size() == 2) {
                     float strat = 1.0 / rpp.at(0);
@@ -105,7 +105,7 @@ vector<color> RayTracer::horizontalRays(OutputVariable *output, HittableList &hi
                             }
                         }
                     }
-                    gamma(pixelColor, rpp.at(0) * rpp.at(0) * rpp.at(1));
+                    multiSample(pixelColor, rpp.at(0) * rpp.at(0) * rpp.at(1));
                 }
                 else {
                     float strat = 1.0 / rpp.at(0);
@@ -124,7 +124,7 @@ vector<color> RayTracer::horizontalRays(OutputVariable *output, HittableList &hi
                             }
                         }
                     }
-                    gamma(pixelColor, rpp.at(0) * rpp.at(1) * rpp.at(2));
+                    multiSample(pixelColor, rpp.at(0) * rpp.at(1) * rpp.at(2));
                 }
             }
             // TODO: make default value for rays per pixel if not specified
@@ -159,12 +159,12 @@ int RayTracer::save_ppm(std::string file_name, const vector<vector<color>>& colo
     return 0;
 }
 
-void RayTracer::gamma(color &color, unsigned int rpp)
+void RayTracer::multiSample(color &color, unsigned int rpp)
 {
     float scale = 1.0 / rpp;
-    color.x() = sqrt(scale * color.x());
-    color.y() = sqrt(scale * color.y());
-    color.z() = sqrt(scale * color.z());
+    color.x() = scale * color.x();
+    color.y() = scale * color.y();
+    color.z() = scale * color.z();
 }
 
 RayTracer::RayTracer(nlohmann::json parsedJson)
