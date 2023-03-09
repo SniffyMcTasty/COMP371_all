@@ -71,63 +71,65 @@ vector<color> RayTracer::horizontalRays(OutputVariable *output, HittableList &hi
             );
         }
         else if(output->isAntialiasing()) {
+            vector<unsigned int> rpp;
             if(output->isRaysPerPixelInit()) {
-                vector<unsigned int> rpp = output->getRaysPerPixel();
-                if(rpp.size() == 1)
-                {
-                    for(int k = 0; k < rpp.at(0); k++) {
-                        u = (j + randomFloat()) / (width-1);
-                        v = (i + randomFloat()) / (height-1);
-                        pixelColor += rayColor(
-                            Ray(origin, lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - origin),
-                            output,
-                            hittableList,
-                            lightVector,
-                            0
-                        );
-                    }
-                    multiSample(pixelColor, rpp.at(0));
-                }
-                else if(rpp.size() == 2) {
-                    float strat = 1.0 / rpp.at(0);
-                    for(int k = 0; k < rpp.at(0); k++) {
-                        for(int l = 0; l < rpp.at(0); l++) {
-                            for(int m = 0; m < rpp.at(1); m++) {
-                                u = (j + l*strat + randomFloat()) / (width-1);
-                                v = (i + k*strat + randomFloat()) / (height-1);
-                                pixelColor += rayColor(
-                                    Ray(origin, lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - origin),
-                                    output,
-                                    hittableList,
-                                    lightVector,
-                                    0
-                                );
-                            }
-                        }
-                    }
-                    multiSample(pixelColor, rpp.at(0) * rpp.at(0) * rpp.at(1));
-                }
-                else {
-                    float strat = 1.0 / rpp.at(0);
-                    for(int k = 0; k < rpp.at(0); k++) {
-                        for(int l = 0; l < rpp.at(1); l++) {
-                            for(int m = 0; m < rpp.at(2); m++) {
-                                u = (j + l*strat + randomFloat()) / (width-1);
-                                v = (i + k*strat + randomFloat()) / (height-1);
-                                pixelColor += rayColor(
-                                    Ray(origin, lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - origin),
-                                    output,
-                                    hittableList,
-                                    lightVector,
-                                    0
-                                );
-                            }
-                        }
-                    }
-                    multiSample(pixelColor, rpp.at(0) * rpp.at(1) * rpp.at(2));
-                }
+                rpp = output->getRaysPerPixel();
+            } else {
+                rpp.push_back(MAX_BOUNCE);
             }
-            // TODO: make default value for rays per pixel if not specified
+            if(rpp.size() == 1)
+            {
+                for(int k = 0; k < rpp.at(0); k++) {
+                    u = (j + randomFloat()) / (width-1);
+                    v = (i + randomFloat()) / (height-1);
+                    pixelColor += rayColor(
+                        Ray(origin, lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - origin),
+                        output,
+                        hittableList,
+                        lightVector,
+                        0
+                    );
+                }
+                multiSample(pixelColor, rpp.at(0));
+            }
+            else if(rpp.size() == 2) {
+                float strat = 1.0 / rpp.at(0);
+                for(int k = 0; k < rpp.at(0); k++) {
+                    for(int l = 0; l < rpp.at(0); l++) {
+                        for(int m = 0; m < rpp.at(1); m++) {
+                            u = (j + l*strat + randomFloat()) / (width-1);
+                            v = (i + k*strat + randomFloat()) / (height-1);
+                            pixelColor += rayColor(
+                                Ray(origin, lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - origin),
+                                output,
+                                hittableList,
+                                lightVector,
+                                0
+                            );
+                        }
+                    }
+                }
+                multiSample(pixelColor, rpp.at(0) * rpp.at(0) * rpp.at(1));
+            }
+            else {
+                float strat = 1.0 / rpp.at(0);
+                for(int k = 0; k < rpp.at(0); k++) {
+                    for(int l = 0; l < rpp.at(1); l++) {
+                        for(int m = 0; m < rpp.at(2); m++) {
+                            u = (j + l*strat + randomFloat()) / (width-1);
+                            v = (i + k*strat + randomFloat()) / (height-1);
+                            pixelColor += rayColor(
+                                Ray(origin, lowerLeftCorner + unitWidth*uCamera*u + unitHeight*vCamera*v - origin),
+                                output,
+                                hittableList,
+                                lightVector,
+                                0
+                            );
+                        }
+                    }
+                }
+                multiSample(pixelColor, rpp.at(0) * rpp.at(1) * rpp.at(2));
+            }
         } else {
             u = float(j) / (width-1);
             v = float(i) / (height-1);
