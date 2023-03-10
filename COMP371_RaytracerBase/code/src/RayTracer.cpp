@@ -200,7 +200,7 @@ color RayTracer::rayColor(Ray ray, OutputVariable *output, HittableList &hittabl
                 string lightType = light->getType();
                 if(lightType == "point" || (lightType == "area" && output->isGlobalIllum())) {
                     vec3 L = (light->getCentre() - rec.p).normalized();
-                    if (!hittableList.hitBeforeLight(Ray(rec.p, L), 0.01, std::numeric_limits<float>::infinity())) {
+                    if (!hittableList.hitBeforeLight(Ray(rec.p, L), 0.01, (light->getCentre() - rec.p).norm())) {
                         float lambertian = max(rec.normal.dot(L), (float) 0.0);
                         diffuseColor += intensities.at(0).cwiseProduct(rec.colors.at(1)) * rec.colorCoefficients.at(1) * lambertian;
                         if(!output->isGlobalIllum()) {
@@ -220,7 +220,7 @@ color RayTracer::rayColor(Ray ray, OutputVariable *output, HittableList &hittabl
         }
         color temp = ambientColor + diffuseColor + specularColor;
         if(maxBounce > 0) {
-            point3 target = rec.p + rec.normal + randomVectorInHemisphere(rec.normal);
+            point3 target = rec.p + randomVectorInHemisphere(rec.normal);
             temp = temp.cwiseProduct(rayColor(Ray(rec.p, target - rec.p), output, hittableList, lightVector, maxBounce-1));
         }
         return temp;
