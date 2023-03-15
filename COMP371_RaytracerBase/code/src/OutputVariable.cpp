@@ -41,6 +41,10 @@ OutputVariable::OutputVariable(nlohmann::json parsedJson)
         this->maxbounce = parsedJson["maxbounce"];
         this->maxbounceInit = true;
     } catch (...) {}
+    try {
+        this->probterminate = parsedJson["probterminate"];
+        this->probterminateInit = true;
+    } catch (...) {}
 }
 
 OutputVariable::~OutputVariable()
@@ -87,6 +91,11 @@ string OutputVariable::toString() const
     if(maxbounceInit) {
         if(!raysperpixelInit && !antialiasingInit && !twosiderenderInit && !globalillumInit) ss << "\n";
         ss << "\t\tmaxbounce: " << this->maxbounce << "\n";
+    }
+
+    if(probterminateInit) {
+        if(!raysperpixelInit && !antialiasingInit && !twosiderenderInit && !globalillumInit && !maxbounceInit) ss << "\n";
+        ss << "\t\tprobterminate: " << this->probterminate << "\n";
     }
 
     ss << "\t}";
@@ -147,4 +156,9 @@ vector<unsigned int> OutputVariable::getRaysPerPixel() const
 unsigned int OutputVariable::getMaxBounce() const
 {
     return this->maxbounce;
+}
+
+float OutputVariable::getProbTerminate() const
+{
+    return this->probterminate;
 }

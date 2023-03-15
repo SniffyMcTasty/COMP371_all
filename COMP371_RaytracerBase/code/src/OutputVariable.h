@@ -36,6 +36,8 @@ private:
     bool globalillumInit = false;
     unsigned int maxbounce = MAX_BOUNCE;
     bool maxbounceInit = false;
+    float probterminate = 1.0;
+    bool probterminateInit = false;
 public:
     OutputVariable(nlohmann::json parsedJson);
     ~OutputVariable();
@@ -51,6 +53,7 @@ public:
     bool isRaysPerPixelInit() const;
     vector<unsigned int> getRaysPerPixel() const;
     unsigned int getMaxBounce() const;
+    float getProbTerminate() const;
 };
 
 #endif

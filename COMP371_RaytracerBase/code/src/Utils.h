@@ -2,6 +2,7 @@
 #define UTILS_H
 
 #define MAX_BOUNCE 10
+#define BIAS 0.001
 
 #include <random>
 #include <Eigen/Core>
