@@ -13,10 +13,6 @@ AreaLight::AreaLight(nlohmann::json parsedJson) : LightVariable(parsedJson)
     try {
         this->usecenter = parsedJson["usecenter"];
     } catch (...) {}
-    try {
-        for(unsigned int i : parsedJson["areasampling"]) this->areasampling.push_back(i);
-        if(!this->areasampling.empty()) this->areasamplingInit = true;
-    } catch (...) {}
 }
 
 AreaLight::~AreaLight()
@@ -31,14 +27,7 @@ string AreaLight::toString() const
     ss << "\n\t\tp2: " << this->p2.transpose();
     ss << "\n\t\tp3: " << this->p3.transpose();
     ss << "\n\t\tp4: " << this->p1.transpose();
-    ss << "\n";
-
-    if(areasamplingInit) {
-        ss << "\n\t\traysperpixel: ";
-        for(unsigned int i : this->areasampling) ss << to_string(i) << " ";
-        ss << "\n";
-    }
-    ss << "\t}";
+    ss << "\n\t}";
 
     return ss.str();
 }
@@ -54,4 +43,14 @@ point3 AreaLight::getCentre() const
     float y = (p1.y() + p2.y() + p3.y() + p4.y()) / 4;
     float z = (p1.z() + p2.z() + p3.z() + p4.z()) / 4;
     return point3(x, y, z);
+}
+
+vector<point3> AreaLight::getPoints()
+{
+    vector<point3> points;
+    points.push_back(this->p1);
+    points.push_back(this->p2);
+    points.push_back(this->p3);
+    points.push_back(this->p4);
+    return points;
 }

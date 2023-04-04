@@ -68,3 +68,13 @@ bool LightVariable::isUsed() const
 {
     return this->used;
 }
+
+vector<unsigned int> LightVariable::getAreaSampling() const
+{
+    return this->areasampling;
+}
+
+bool LightVariable::isAreaSamplingInit() const
+{
+    return this->areasamplingInit;
+}

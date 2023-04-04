@@ -19,6 +19,7 @@
 #include "PointLight.h"
 #include "Utils.h"
 #include <ctime>
+#include "AreaLight.h"
 #ifdef linux
     #include <pthread.h>
 #endif

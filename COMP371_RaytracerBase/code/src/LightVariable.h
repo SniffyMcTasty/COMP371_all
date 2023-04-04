@@ -34,6 +34,8 @@ public:
     array<point3, 2> getIntensities() const;
     bool isUsed() const;
     virtual point3 getCentre() const = 0;
+    vector<unsigned int> getAreaSampling() const;
+    bool isAreaSamplingInit() const;
 };
 
 #endif
