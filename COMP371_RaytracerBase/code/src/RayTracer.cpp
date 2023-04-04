@@ -220,7 +220,6 @@ color RayTracer::rayColor(Ray ray, OutputVariable *output, HittableList &hittabl
         }
         color temp = ambientColor + diffuseColor + specularColor;
         if(maxBounce > 0 && randomFloat() > output->getProbTerminate()) {
-            float roulette = randomFloat();
             point3 target = rec.p + randomVectorInHemisphere(rec.normal);
             temp += rayColor(Ray(rec.p, target - rec.p), output, hittableList, lightVector, maxBounce-1) / output->getMaxBounce() * (1 / (2 * M_PI));
         }
